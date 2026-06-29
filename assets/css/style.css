@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #2563EB;
+  --primary-dark: #1D4ED8;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --text: #111827;
+  --subtitle: #6B7280;
+  --border: #E5E7EB;
+  --radius: 16px;
+  --space-8: 8px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, .06);
+  --sidebar-width: 272px;
+  --navbar-height: 78px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f8fafc 38%),
+    linear-gradient(180deg, #f8fafc 0%, #f3f6fb 100%);
+}
+
+body.app-body {
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-main {
+  margin-left: var(--sidebar-width);
+  padding-top: var(--navbar-height);
+  min-height: 100vh;
+  transition: margin-left .28s ease;
+}
+
+.app-content {
+  padding: var(--space-24);
+}
+
+.surface-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -.02em;
+  font-weight: 800;
+}
+
+.page-subtitle {
+  margin: var(--space-8) 0 0;
+  color: var(--subtitle);
+}
+
+.low-stock-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--danger);
+}
+
+.flash-zone {
+  margin-bottom: var(--space-16);
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --sidebar-width: 88px;
+  }
+
+  .app-main {
+    margin-left: var(--sidebar-width);
+  }
+
+  .sidebar-brand-text,
+  .sidebar-user,
+  .menu-label,
+  .menu-heading {
+    display: none;
+  }
+
+  .menu-link {
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .menu-link i {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  .app-main {
+    margin-left: 0;
+  }
+
+  .app-content {
+    padding: var(--space-16);
+  }
+}
