@@ -5,6 +5,10 @@ require '../config/conexao.php';
 $email = '';
 
 if($_POST){
+    // CSRF validation
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+        $erro = "Falha de segurança (CSRF)";
+    } else {
     $email = $_POST['email'];
 
     $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email=?");
@@ -18,6 +22,7 @@ if($_POST){
     } else {
         $erro = "Email ou senha inválidos";
     }
+    }
 }
 ?>
 
@@ -28,25 +33,79 @@ if($_POST){
     <title>Login - Irtrade</title>
 
     <!-- AdminLTE -->
-    <link rel="stylesheet" href="/irtrade-crud/adminlte/plugins/fontawesome-free/css/all.min.css">
-    <link rel="stylesheet" href="/irtrade-crud/adminlte/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="/Estagio/adminlte/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="/Estagio/adminlte/dist/css/adminlte.min.css">
 
     <style>
         body {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top, rgba(255,255,255,.18), transparent 28%),
+                        linear-gradient(135deg, #2a2d3c, #101827);
+            margin: 0;
+            font-family: "Source Sans Pro", sans-serif;
         }
 
         .login-box {
+            width: 100%;
+            max-width: 430px;
             animation: fadeIn 0.6s ease-in-out;
+            padding: 1rem;
+        }
+
+        .login-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            border-radius: 1.25rem;
+            box-shadow: 0 28px 90px rgba(0, 0, 0, .25);
+            border: none;
+            overflow: hidden;
+        }
+
+        .login-card-body {
+            border-radius: 1.25rem;
+            padding: 2rem;
+            background: rgba(255,255,255,.95);
+        }
+
+        .btn-primary {
+            width: 100%;
+            border-radius: .85rem;
+            font-weight: 600;
+        }
+
+        .login-box-msg {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            text-align: center;
+        }
+
+        .input-group-text {
+            background: #f4f6f9;
+            border: 1px solid #d7dae3;
+        }
+
+        .form-control {
+            border-radius: .75rem;
+        }
+
+        .alert {
+            border-radius: .85rem;
         }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        .card {
-            border-radius: 10px;
         }
     </style>
 </head>
@@ -71,6 +130,7 @@ if($_POST){
             <?php endif; ?>
 
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 
                 <!-- EMAIL -->
                 <div class="input-group mb-3">
@@ -119,9 +179,9 @@ if($_POST){
 </div>
 
 <!-- JS -->
-<script src="/irtrade-crud/adminlte/plugins/jquery/jquery.min.js"></script>
-<script src="/irtrade-crud/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="/irtrade-crud/adminlte/dist/js/adminlte.min.js"></script>
+<script src="/Estagio/adminlte/plugins/jquery/jquery.min.js"></script>
+<script src="/Estagio/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/Estagio/adminlte/dist/js/adminlte.min.js"></script>
 
 <script>
 function toggleSenha() {
