@@ -1,14 +1,16 @@
 .table-shell {
   overflow: hidden;
+  width: 100%;
+  max-width: none;
 }
 
 .table-toolbar {
-  padding: var(--space-24);
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-16);
+  gap: 12px;
 }
 
 .table-title {
@@ -25,7 +27,7 @@
 
 .table-search {
   position: relative;
-  min-width: 320px;
+  min-width: 280px;
 }
 
 .table-search i {
@@ -46,10 +48,12 @@
 .table-scroll {
   overflow: auto;
   max-height: 72vh;
+  width: 100%;
 }
 
 .data-table {
   width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
 }
 
@@ -111,7 +115,7 @@
 }
 
 .table-pagination {
-  padding: 14px var(--space-24);
+  padding: 12px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;

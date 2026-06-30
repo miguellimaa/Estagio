@@ -7,11 +7,11 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-$total = $pdo->query('SELECT COUNT(*) FROM perifericos')->fetchColumn();
-$quantidade = $pdo->query('SELECT SUM(quantidade) FROM perifericos')->fetchColumn();
-$tipos = $pdo->query('SELECT COUNT(DISTINCT tipo) FROM perifericos')->fetchColumn();
+$total = $pdo->query('SELECT COUNT(*) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
+$quantidade = $pdo->query('SELECT SUM(quantidade) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
+$tipos = $pdo->query('SELECT COUNT(DISTINCT tipo) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
 
-$grafico = $pdo->query('SELECT tipo, SUM(quantidade) total FROM perifericos GROUP BY tipo');
+$grafico = $pdo->query('SELECT tipo, SUM(quantidade) total FROM perifericos WHERE deleted_at IS NULL GROUP BY tipo');
 
 $labels = [];
 $dados = [];
@@ -21,11 +21,11 @@ foreach ($grafico as $g) {
     $dados[] = $g['total'];
 }
 
-$baixo = $pdo->query('SELECT * FROM perifericos WHERE quantidade <= 5');
+$baixo = $pdo->query('SELECT * FROM perifericos WHERE deleted_at IS NULL AND quantidade <= 5');
 $baixoItens = $baixo->fetchAll(PDO::FETCH_ASSOC);
 
-$ultimos = $pdo->query('SELECT * FROM perifericos ORDER BY id DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
-$perifericosBusca = $pdo->query('SELECT id, nome_ativo, tipo, numero_serie, chave_licenca, quantidade FROM perifericos ORDER BY nome_ativo ASC')->fetchAll(PDO::FETCH_ASSOC);
+$ultimos = $pdo->query('SELECT * FROM perifericos WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
+$perifericosBusca = $pdo->query('SELECT id, nome_ativo, tipo, numero_serie, chave_licenca, quantidade FROM perifericos WHERE deleted_at IS NULL ORDER BY nome_ativo ASC')->fetchAll(PDO::FETCH_ASSOC);
 
 $labelsJson = json_encode($labels, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 $dadosJson = json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -93,6 +93,7 @@ ob_start();
         <div class="d-flex gap-2 flex-wrap">
             <a href="perifericos/create.php" class="btn-modern btn-primary-modern"><i class="fa-solid fa-plus me-2"></i>Novo</a>
             <a href="perifericos/read.php" class="btn-modern btn-light-modern"><i class="fa-solid fa-table-list me-2"></i>Listar</a>
+            <a href="perifericos/lixeira.php" class="btn-modern btn-warning-modern"><i class="fa-solid fa-trash-can-arrow-up me-2"></i>Lixeira</a>
             <a href="perifericos/export.php" class="btn-modern btn-success-modern"><i class="fa-solid fa-file-export me-2"></i>Exportar</a>
         </div>
     </div>

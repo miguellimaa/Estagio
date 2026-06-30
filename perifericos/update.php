@@ -15,7 +15,7 @@ if (!$id) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM perifericos WHERE id=?");
+$stmt = $pdo->prepare("SELECT * FROM perifericos WHERE id=? AND deleted_at IS NULL");
 $stmt->execute([$id]);
 $dado = $stmt->fetch();
 
@@ -101,7 +101,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
         numero_serie=?,
         chave_licenca=?,
         quantidade=?
-        WHERE id=?
+        WHERE id=? AND deleted_at IS NULL
     ");
 
     $stmt->execute([

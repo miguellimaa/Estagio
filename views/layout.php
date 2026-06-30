@@ -6,6 +6,7 @@ $pagina = $_SERVER['REQUEST_URI'] ?? '';
 $menu = [
     ['label' => 'Dashboard', 'icon' => 'fa-chart-line', 'href' => $baseUrl . '/index.php', 'match' => '/index.php'],
     ['label' => 'Periféricos', 'icon' => 'fa-keyboard', 'href' => $baseUrl . '/perifericos/read.php', 'match' => '/perifericos/'],
+    ['label' => 'Lixeira', 'icon' => 'fa-trash-can', 'href' => $baseUrl . '/perifericos/lixeira.php', 'match' => '/perifericos/lixeira.php'],
     ['label' => 'Usuários', 'icon' => 'fa-users', 'href' => $baseUrl . '/usuarios/read.php', 'match' => '/usuarios/'],
     ['label' => 'Relatórios', 'icon' => 'fa-chart-pie', 'href' => '#', 'match' => '/relatorios/'],
     ['label' => 'Configurações', 'icon' => 'fa-gear', 'href' => '#', 'match' => '/configuracoes/'],

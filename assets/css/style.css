@@ -47,21 +47,38 @@ a {
 }
 
 .app-shell {
+  display: flex;
   min-height: 100vh;
+  width: 100%;
 }
 
 .app-main {
+  flex: 1;
   margin-left: var(--sidebar-width);
+  width: calc(100vw - var(--sidebar-width));
+  max-width: none;
   padding-top: var(--navbar-height);
   min-height: 100vh;
   transition: margin-left .28s ease;
 }
 
 .app-content {
-  padding: var(--space-24);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1700px) {
+  .app-content {
+    padding: 24px 28px 28px;
+  }
 }
 
 .surface-card {
+  width: 100%;
+  max-width: none;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -99,6 +116,7 @@ a {
 
   .app-main {
     margin-left: var(--sidebar-width);
+    width: calc(100vw - var(--sidebar-width));
   }
 
   .sidebar-brand-text,
@@ -125,9 +143,10 @@ a {
 
   .app-main {
     margin-left: 0;
+    width: 100vw;
   }
 
   .app-content {
-    padding: var(--space-16);
+    padding: 16px;
   }
 }
