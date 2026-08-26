@@ -44,7 +44,7 @@ if (!empty($old)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+    if (!validate_csrf()) {
         $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Falha de segurança (CSRF).'];
         header("Location: update.php?id={$id}");
         exit;
@@ -107,58 +107,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<section class="surface-card form-shell fade-in">
+<section class="surface-card p-4 fade-in">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="page-title">Editar usuário</h1>
-            <p class="page-subtitle">Atualize os dados do usuário selecionado.</p>
+            <h1 class="page-title display-6 fw-bold mb-0">Editar usuário</h1>
+            <p class="page-subtitle text-secondary mb-0 mt-2">Atualize os dados do usuário selecionado.</p>
         </div>
-        <a href="read.php" class="btn-modern btn-light-modern"><i class="fa-solid fa-arrow-left me-2"></i>Voltar</a>
+        <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-arrow-left me-2"></i>Voltar</a>
     </div>
 
-    <form method="POST" novalidate>
+    <form method="POST" novalidate class="row g-3">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-        <div class="form-grid">
-            <div class="form-field">
-                <label for="nome">Nome</label>
-                <div class="input-wrap">
-                    <i class="fa-solid fa-user"></i>
-                    <input id="nome" name="nome" value="<?= htmlspecialchars($dado['nome'] ?? '') ?>" class="<?= !empty($errors['nome']) ? 'input-error' : '' ?>" required>
-                </div>
+        <div class="col-12 col-md-6">
+            <label for="nome" class="form-label fw-semibold">Nome</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                <input id="nome" name="nome" value="<?= htmlspecialchars($dado['nome'] ?? '') ?>" class="form-control <?= !empty($errors['nome']) ? 'is-invalid' : '' ?>" required>
             </div>
+            <?php if (!empty($errors['nome'])): ?><div class="invalid-feedback d-block">Informe o nome.</div><?php endif; ?>
+        </div>
 
-            <div class="form-field">
-                <label for="email">E-mail</label>
-                <div class="input-wrap">
-                    <i class="fa-solid fa-envelope"></i>
-                    <input id="email" name="email" type="email" value="<?= htmlspecialchars($dado['email'] ?? '') ?>" class="<?= !empty($errors['email']) ? 'input-error' : '' ?>" required>
-                </div>
+        <div class="col-12 col-md-6">
+            <label for="email" class="form-label fw-semibold">E-mail</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                <input id="email" name="email" type="email" value="<?= htmlspecialchars($dado['email'] ?? '') ?>" class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>" required>
             </div>
+            <?php if (!empty($errors['email'])): ?><div class="invalid-feedback d-block">Informe um e-mail válido.</div><?php endif; ?>
+        </div>
 
-            <div class="form-field">
-                <label for="senha">Nova senha (opcional)</label>
-                <div class="input-wrap">
-                    <i class="fa-solid fa-lock"></i>
-                    <input id="senha" name="senha" type="text" placeholder="Deixe em branco para manter a atual">
-                </div>
-            </div>
-
-            <div class="form-field">
-                <label for="perfil">Perfil</label>
-                <div class="input-wrap">
-                    <i class="fa-solid fa-shield"></i>
-                    <select id="perfil" name="perfil" class="<?= !empty($errors['perfil']) ? 'input-error' : '' ?>" required>
-                        <option value="usuario" <?= ($dado['perfil'] ?? 'usuario') === 'usuario' ? 'selected' : '' ?>>usuario</option>
-                        <option value="admin" <?= ($dado['perfil'] ?? 'usuario') === 'admin' ? 'selected' : '' ?>>admin</option>
-                    </select>
-                </div>
+        <div class="col-12 col-md-6">
+            <label for="senha" class="form-label fw-semibold">Nova senha (opcional)</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                <input id="senha" name="senha" type="text" placeholder="Deixe em branco para manter a atual" class="form-control">
             </div>
         </div>
 
-        <div class="form-actions">
-            <a href="read.php" class="btn-modern btn-light-modern"><i class="fa-solid fa-xmark me-2"></i>Cancelar</a>
-            <button type="submit" class="btn-modern btn-warning-modern"><i class="fa-solid fa-floppy-disk me-2"></i>Atualizar</button>
+        <div class="col-12 col-md-6">
+            <label for="perfil" class="form-label fw-semibold">Perfil</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa-solid fa-shield"></i></span>
+                <select id="perfil" name="perfil" class="form-select <?= !empty($errors['perfil']) ? 'is-invalid' : '' ?>" required>
+                    <option value="usuario" <?= ($dado['perfil'] ?? 'usuario') === 'usuario' ? 'selected' : '' ?>>usuario</option>
+                    <option value="admin" <?= ($dado['perfil'] ?? 'usuario') === 'admin' ? 'selected' : '' ?>>admin</option>
+                </select>
+            </div>
+            <?php if (!empty($errors['perfil'])): ?><div class="invalid-feedback d-block">Selecione um perfil válido.</div><?php endif; ?>
+        </div>
+
+        <div class="col-12 d-flex justify-content-between gap-2 mt-2">
+            <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-xmark me-2"></i>Cancelar</a>
+            <button type="submit" class="btn btn-warning btn-ripple"><i class="fa-solid fa-floppy-disk me-2"></i>Atualizar</button>
         </div>
     </form>
 </section>

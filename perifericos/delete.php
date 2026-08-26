@@ -21,9 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$csrf = $_POST['csrf_token'] ?? '';
-
-if (!hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
+if (!validate_csrf()) {
     $_SESSION['flash'] = [
         'type' => 'danger',
         'message' => 'Falha de segurança (CSRF).'

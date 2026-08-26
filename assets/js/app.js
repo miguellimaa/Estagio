@@ -39,7 +39,7 @@
     window.irtradeToast(flashElement.dataset.message, flashElement.dataset.type || 'info');
   }
 
-  document.querySelectorAll('.btn-modern').forEach((button) => {
+  document.querySelectorAll('.btn-ripple').forEach((button) => {
     button.classList.add('ripple-host');
     button.addEventListener('click', (event) => {
       const ripple = document.createElement('span');

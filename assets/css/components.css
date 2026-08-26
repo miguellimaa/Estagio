@@ -31,31 +31,7 @@
 }
 
 .search-box {
-  position: relative;
   min-width: 320px;
-}
-
-.search-box input {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px 14px 10px 38px;
-  outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-
-.search-box i {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-}
-
-.search-box input:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, .12);
 }
 
 .topbar-right {
@@ -124,65 +100,14 @@
   place-items: center;
 }
 
-.btn-modern {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-weight: 600;
-  transition: transform .2s ease, box-shadow .2s ease;
+.btn-ripple {
   position: relative;
   overflow: hidden;
+  transition: transform .2s ease;
 }
 
-.btn-modern:hover {
-  transform: translateY(-2px);
-}
-
-.btn-primary-modern {
-  color: #fff;
-  background: linear-gradient(120deg, var(--primary), var(--primary-dark));
-  box-shadow: 0 10px 24px rgba(37, 99, 235, .25);
-}
-
-.btn-success-modern {
-  color: #fff;
-  background: linear-gradient(120deg, #0ea371, #10b981);
-  box-shadow: 0 10px 24px rgba(16, 185, 129, .2);
-}
-
-.btn-warning-modern {
-  color: #fff;
-  background: linear-gradient(120deg, #f59e0b, #f97316);
-}
-
-.btn-light-modern {
-  border: 1px solid var(--border);
-  color: #374151;
-  background: #fff;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-weight: 600;
-  font-size: .78rem;
-}
-
-.status-badge.success {
-  color: #047857;
-  background: #d1fae5;
-}
-
-.status-badge.warning {
-  color: #b45309;
-  background: #fef3c7;
-}
-
-.status-badge.danger {
-  color: #b91c1c;
-  background: #fee2e2;
+.btn-ripple:hover {
+  transform: translateY(-1px);
 }
 
 .app-toast-host {

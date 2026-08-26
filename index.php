@@ -7,6 +7,10 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+$lowStockThreshold = setting_get_int($pdo, 'low_stock_threshold', 5);
+$exportRole = setting_get($pdo, 'export_role', 'admin') ?? 'admin';
+$canExport = $exportRole === 'usuario' || is_admin();
+
 $total = $pdo->query('SELECT COUNT(*) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
 $quantidade = $pdo->query('SELECT SUM(quantidade) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
 $tipos = $pdo->query('SELECT COUNT(DISTINCT tipo) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
@@ -21,7 +25,9 @@ foreach ($grafico as $g) {
     $dados[] = $g['total'];
 }
 
-$baixo = $pdo->query('SELECT * FROM perifericos WHERE deleted_at IS NULL AND quantidade <= 5');
+$stmtBaixo = $pdo->prepare('SELECT * FROM perifericos WHERE deleted_at IS NULL AND quantidade <= ?');
+$stmtBaixo->execute([$lowStockThreshold]);
+$baixo = $stmtBaixo;
 $baixoItens = $baixo->fetchAll(PDO::FETCH_ASSOC);
 
 $ultimos = $pdo->query('SELECT * FROM perifericos WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
@@ -45,139 +51,155 @@ if ($perifericosBuscaJson === false) {
 
 ob_start();
 ?>
-<section class="dashboard-hero fade-in">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+<section class="dashboard-shell fade-in">
+    <header class="dashboard-header reveal-on-scroll">
         <div>
-            <span class="hero-kicker">IRTRADE Asset Manager</span>
-            <h1 class="hero-title">Visão executiva de ativos e estoque</h1>
-            <p class="hero-text">Monitore indicadores, acompanhe o status dos periféricos e antecipe necessidades de reposição com uma visão clara do ambiente.</p>
+            <span class="dashboard-kicker">IRTRADE Asset Manager</span>
+            <h1 class="dashboard-title">Dashboard Executivo de Inventário</h1>
+            <p class="dashboard-subtitle">Acompanhe indicadores-chave, distribuição de categorias e alertas operacionais em uma visão única e profissional.</p>
         </div>
-        <div class="text-md-end mt-3 mt-md-0">
-            <span class="status-badge success">Bem-vindo, <?= htmlspecialchars($_SESSION['user']['nome']) ?></span>
+        <div class="dashboard-header-actions">
+            <span class="badge rounded-pill text-bg-success">Bem-vindo, <?= htmlspecialchars($_SESSION['user']['nome']) ?></span>
+            <div class="quick-actions">
+                <a href="perifericos/create.php" class="btn btn-primary btn-ripple"><i class="fa-solid fa-plus me-2"></i>Novo</a>
+                <a href="perifericos/read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-table-list me-2"></i>Listar</a>
+                <a href="perifericos/lixeira.php" class="btn btn-warning btn-ripple"><i class="fa-solid fa-trash-can-arrow-up me-2"></i>Lixeira</a>
+                <?php if ($canExport): ?>
+                    <a href="perifericos/export.php" class="btn btn-success btn-ripple"><i class="fa-solid fa-file-export me-2"></i>Exportar CSV</a>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
-</section>
+    </header>
 
-<section class="metric-grid fade-in delay-1">
-    <article class="metric-card reveal-on-scroll">
-        <p class="metric-label">Total Periféricos</p>
-        <h3 class="metric-value" data-counter="<?= (int) $total ?>">0</h3>
-        <div class="metric-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
-    </article>
+    <section class="metric-grid fade-in delay-1">
+        <article class="metric-card reveal-on-scroll metric-card-neutral">
+            <div class="metric-head">
+                <p class="metric-label">Total de Itens</p>
+                <div class="metric-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+            </div>
+            <h3 class="metric-value" data-counter="<?= (int) $total ?>">0</h3>
+            <p class="metric-footnote">Ativos cadastrados no inventário</p>
+        </article>
 
-    <article class="metric-card reveal-on-scroll">
-        <p class="metric-label">Quantidade Estoque</p>
-        <h3 class="metric-value" data-counter="<?= (int) ($quantidade ?? 0) ?>">0</h3>
-        <div class="metric-icon"><i class="fa-solid fa-layer-group"></i></div>
-    </article>
+        <article class="metric-card reveal-on-scroll metric-card-sky">
+            <div class="metric-head">
+                <p class="metric-label">Estoque Total</p>
+                <div class="metric-icon"><i class="fa-solid fa-layer-group"></i></div>
+            </div>
+            <h3 class="metric-value" data-counter="<?= (int) ($quantidade ?? 0) ?>">0</h3>
+            <p class="metric-footnote">Somatório de unidades disponíveis</p>
+        </article>
 
-    <article class="metric-card reveal-on-scroll">
-        <p class="metric-label">Categorias</p>
-        <h3 class="metric-value" data-counter="<?= (int) $tipos ?>">0</h3>
-        <div class="metric-icon"><i class="fa-solid fa-tags"></i></div>
-    </article>
+        <article class="metric-card reveal-on-scroll metric-card-steel">
+            <div class="metric-head">
+                <p class="metric-label">Tipos</p>
+                <div class="metric-icon"><i class="fa-solid fa-tags"></i></div>
+            </div>
+            <h3 class="metric-value" data-counter="<?= (int) $tipos ?>">0</h3>
+            <p class="metric-footnote">Categorias distintas no estoque</p>
+        </article>
 
-    <article class="metric-card reveal-on-scroll">
-        <p class="metric-label">Estoque Crítico</p>
-        <h3 class="metric-value" data-counter="<?= count($baixoItens) ?>">0</h3>
-        <div class="metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-    </article>
-</section>
+        <article class="metric-card reveal-on-scroll metric-card-alert">
+            <div class="metric-head">
+                <p class="metric-label">Estoque Baixo</p>
+                <div class="metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            </div>
+            <h3 class="metric-value" data-counter="<?= count($baixoItens) ?>">0</h3>
+            <p class="metric-footnote">Itens com quantidade menor ou igual a <?= (int) $lowStockThreshold ?></p>
+        </article>
+    </section>
 
-<section class="surface-card chart-card mt-4 reveal-on-scroll">
-    <div class="d-flex justify-content-between flex-wrap gap-3 align-items-center mb-3">
-        <div>
-            <h2 class="section-title">Ações rápidas</h2>
-            <p class="section-subtitle mb-0">Operações frequentes do módulo de ativos.</p>
+    <section class="surface-card detail-card reveal-on-scroll" id="dashboard-search-result" style="display:none;">
+        <h2 class="section-title">Detalhes do periférico selecionado</h2>
+        <p class="section-subtitle">Informações completas encontradas pela busca global.</p>
+        <div class="search-result-grid">
+            <div><strong>Nome:</strong> <span id="search-result-nome">-</span></div>
+            <div><strong>Tipo:</strong> <span id="search-result-tipo">-</span></div>
+            <div><strong>Quantidade:</strong> <span id="search-result-quantidade">-</span></div>
+            <div><strong>Número de Série:</strong> <span id="search-result-serie">-</span></div>
+            <div><strong>Licença:</strong> <span id="search-result-licenca">-</span></div>
+            <div><strong>ID:</strong> <span id="search-result-id">-</span></div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="perifericos/create.php" class="btn-modern btn-primary-modern"><i class="fa-solid fa-plus me-2"></i>Novo</a>
-            <a href="perifericos/read.php" class="btn-modern btn-light-modern"><i class="fa-solid fa-table-list me-2"></i>Listar</a>
-            <a href="perifericos/lixeira.php" class="btn-modern btn-warning-modern"><i class="fa-solid fa-trash-can-arrow-up me-2"></i>Lixeira</a>
-            <a href="perifericos/export.php" class="btn-modern btn-success-modern"><i class="fa-solid fa-file-export me-2"></i>Exportar</a>
+    </section>
+
+    <section class="chart-grid">
+        <article class="surface-card panel-card chart-panel reveal-on-scroll">
+            <div class="panel-head">
+                <h2 class="section-title">Gráfico Pizza</h2>
+                <p class="section-subtitle">Distribuição de quantidade por tipo de periférico.</p>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="grafico"></canvas>
+            </div>
+        </article>
+
+        <article class="surface-card panel-card chart-panel reveal-on-scroll">
+            <div class="panel-head">
+                <h2 class="section-title">Gráfico Barras</h2>
+                <p class="section-subtitle">Comparativo de volumes por categoria.</p>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="graficoBarras"></canvas>
+            </div>
+        </article>
+    </section>
+
+    <section class="surface-card panel-card reveal-on-scroll">
+        <div class="panel-head">
+            <h2 class="section-title">Últimos periféricos cadastrados</h2>
+            <p class="section-subtitle">Lista dos cinco registros mais recentes no sistema.</p>
         </div>
-    </div>
-</section>
 
-<section class="surface-card chart-card mt-3 reveal-on-scroll" id="dashboard-search-result" style="display:none;">
-    <h2 class="section-title">Detalhes do periférico selecionado</h2>
-    <p class="section-subtitle">Informações completas encontradas pela barra de pesquisa.</p>
-
-    <div class="row g-3">
-        <div class="col-md-4"><strong>Nome:</strong> <span id="search-result-nome">-</span></div>
-        <div class="col-md-4"><strong>Tipo:</strong> <span id="search-result-tipo">-</span></div>
-        <div class="col-md-4"><strong>Quantidade:</strong> <span id="search-result-quantidade">-</span></div>
-        <div class="col-md-4"><strong>Número de Série:</strong> <span id="search-result-serie">-</span></div>
-        <div class="col-md-4"><strong>Licença:</strong> <span id="search-result-licenca">-</span></div>
-        <div class="col-md-4"><strong>ID:</strong> <span id="search-result-id">-</span></div>
-    </div>
-</section>
-
-<section class="dashboard-grid">
-    <article class="surface-card chart-card reveal-on-scroll">
-        <h2 class="section-title">Gráfico Pizza</h2>
-        <p class="section-subtitle">Distribuição por tipo de periférico.</p>
-        <div class="chart-wrap">
-            <canvas id="grafico"></canvas>
-        </div>
-    </article>
-
-    <article class="surface-card activity-card reveal-on-scroll">
-        <h2 class="section-title">Últimos periféricos</h2>
-        <p class="section-subtitle">Cadastros mais recentes no sistema.</p>
-        <ul class="list-clean">
+        <ul class="list-clean list-cards">
             <?php foreach ($ultimos as $item): ?>
                 <li>
-                    <div>
+                    <div class="item-main">
                         <strong><?= htmlspecialchars($item['nome_ativo']) ?></strong>
-                        <div class="text-muted"><?= htmlspecialchars($item['tipo']) ?></div>
+                        <span class="item-type"><?= htmlspecialchars($item['tipo']) ?></span>
                     </div>
-                    <span class="status-badge <?= (int)$item['quantidade'] <= 5 ? 'warning' : 'success' ?>">
-                        Qtd: <?= htmlspecialchars($item['quantidade']) ?>
-                    </span>
+                    <div class="item-meta">
+                        <span class="item-qty">Quantidade: <?= htmlspecialchars($item['quantidade']) ?></span>
+                        <span class="badge rounded-pill <?= (int)$item['quantidade'] <= $lowStockThreshold ? 'text-bg-warning' : 'text-bg-success' ?>">
+                            <?= (int)$item['quantidade'] <= $lowStockThreshold ? 'Baixo' : 'Regular' ?>
+                        </span>
+                    </div>
                 </li>
             <?php endforeach; ?>
             <?php if (empty($ultimos)): ?>
-                <li><span class="text-muted">Nenhum periférico cadastrado.</span></li>
+                <li class="list-empty"><span class="text-muted">Nenhum periférico cadastrado.</span></li>
             <?php endif; ?>
         </ul>
-    </article>
-</section>
+    </section>
 
-<section class="dashboard-grid mt-3">
-    <article class="surface-card chart-card reveal-on-scroll">
-        <h2 class="section-title">Gráfico Barras</h2>
-        <p class="section-subtitle">Quantidade por categoria.</p>
-        <div class="chart-wrap">
-            <canvas id="graficoBarras"></canvas>
+    <section class="surface-card panel-card reveal-on-scroll <?= empty($baixoItens) ? 'alert-card-success' : 'alert-card-danger' ?>">
+        <div class="panel-head">
+            <h2 class="section-title">Alertas de estoque</h2>
+            <p class="section-subtitle">Itens com nível crítico de disponibilidade.</p>
         </div>
-    </article>
 
-    <article class="surface-card activity-card reveal-on-scroll">
-        <h2 class="section-title">Atividades recentes</h2>
-        <p class="section-subtitle">Eventos de acompanhamento do estoque.</p>
-        <ul class="list-clean">
-            <li><span>Atualização de inventário</span><span class="text-muted">Hoje</span></li>
-            <li><span>Exportação XLS executada</span><span class="text-muted">Hoje</span></li>
-            <li><span>Revisão de categorias</span><span class="text-muted">Ontem</span></li>
-            <li><span>Conferência de disponibilidade</span><span class="text-muted">Ontem</span></li>
-        </ul>
-    </article>
+        <?php if (!empty($baixoItens)): ?>
+            <ul class="list-clean list-cards alert-list">
+                <?php foreach ($baixoItens as $b): ?>
+                    <li>
+                        <div class="item-main">
+                            <span class="low-stock-dot"></span>
+                            <strong><?= htmlspecialchars($b['nome_ativo']) ?></strong>
+                        </div>
+                        <div class="item-meta">
+                            <span class="item-type"><?= htmlspecialchars($b['tipo']) ?></span>
+                            <span class="badge rounded-pill text-bg-danger">Restante: <?= htmlspecialchars($b['quantidade']) ?></span>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <div class="empty-alert-state">
+                <i class="fa-solid fa-circle-check"></i>
+                <p>Nenhum item com estoque baixo.</p>
+            </div>
+        <?php endif; ?>
+    </section>
 </section>
-
-<?php if (!empty($baixoItens)): ?>
-<section class="low-stock-alert reveal-on-scroll">
-    <h3><i class="fa-solid fa-triangle-exclamation me-2"></i>Alerta de estoque baixo</h3>
-    <ul class="list-clean">
-        <?php foreach ($baixoItens as $b): ?>
-            <li>
-                <span><span class="low-stock-dot me-2"></span><strong><?= htmlspecialchars($b['nome_ativo']) ?></strong></span>
-                <span class="status-badge danger">Restante: <?= htmlspecialchars($b['quantidade']) ?></span>
-            </li>
-        <?php endforeach; ?>
-    </ul>
-</section>
-<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>

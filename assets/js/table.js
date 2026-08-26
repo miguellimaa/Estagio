@@ -10,7 +10,8 @@
   const rows = Array.from(table.querySelectorAll('tbody tr'));
   let filteredRows = [...rows];
   let page = 1;
-  const perPage = 8;
+  const perPageFromData = Number.parseInt(table.dataset.perPage || '', 10);
+  const perPage = Number.isFinite(perPageFromData) && perPageFromData > 0 ? perPageFromData : 8;
 
   const render = () => {
     const totalPages = Math.max(1, Math.ceil(filteredRows.length / perPage));

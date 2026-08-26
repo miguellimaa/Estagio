@@ -9,7 +9,7 @@ $menu = [
     ['label' => 'Lixeira', 'icon' => 'fa-trash-can', 'href' => $baseUrl . '/perifericos/lixeira.php', 'match' => '/perifericos/lixeira.php'],
     ['label' => 'Usuários', 'icon' => 'fa-users', 'href' => $baseUrl . '/usuarios/read.php', 'match' => '/usuarios/'],
     ['label' => 'Relatórios', 'icon' => 'fa-chart-pie', 'href' => '#', 'match' => '/relatorios/'],
-    ['label' => 'Configurações', 'icon' => 'fa-gear', 'href' => '#', 'match' => '/configuracoes/'],
+    ['label' => 'Configurações', 'icon' => 'fa-gear', 'href' => $baseUrl . '/configuracoes/read.php', 'match' => '/configuracoes/'],
 ];
 
 $flash = null;
@@ -63,6 +63,7 @@ if (!empty($_SESSION['flash'])) {
         <span class="menu-heading">Navegação</span>
         <ul class="menu-list">
             <?php foreach ($menu as $item): ?>
+                <?php if ($item['match'] === '/configuracoes/' && (($_SESSION['user']['perfil'] ?? '') !== 'admin')) continue; ?>
                 <?php $active = strpos($pagina, $item['match']) !== false ? 'active' : ''; ?>
                 <li>
                     <a href="<?= htmlspecialchars($item['href']) ?>" class="menu-link <?= $active ?>">
@@ -93,9 +94,9 @@ if (!empty($_SESSION['flash'])) {
             </div>
 
             <div class="topbar-right">
-                <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="Pesquisar periférico..." data-global-search autocomplete="off">
+                <div class="search-box input-group input-group-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" class="form-control" placeholder="Pesquisar periférico..." data-global-search autocomplete="off">
                 </div>
 
                 <button class="notify-btn" type="button" aria-label="Notificações">

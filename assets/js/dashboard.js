@@ -1,19 +1,79 @@
 (() => {
+  const numberFormatter = new Intl.NumberFormat('pt-BR');
+
   const counters = document.querySelectorAll('[data-counter]');
   counters.forEach((counter) => {
     const target = parseInt(counter.dataset.counter || '0', 10);
-    let current = 0;
-    const increment = Math.max(1, Math.ceil(target / 35));
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        counter.textContent = String(target);
-        clearInterval(timer);
-        return;
+    if (Number.isNaN(target)) {
+      counter.textContent = '0';
+      return;
+    }
+
+    const duration = 900;
+    const startTime = performance.now();
+
+    const animateCounter = (now) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(target * eased);
+      counter.textContent = numberFormatter.format(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCounter);
       }
-      counter.textContent = String(current);
-    }, 22);
+    };
+
+    requestAnimationFrame(animateCounter);
   });
+
+  const chartBaseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 1100,
+      easing: 'easeOutQuart'
+    },
+    layout: {
+      padding: {
+        top: 6,
+        right: 8,
+        bottom: 6,
+        left: 8
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          boxWidth: 10,
+          boxHeight: 10,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 16,
+          color: '#334155',
+          font: {
+            size: 12,
+            weight: '600'
+          }
+        }
+      },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        borderColor: '#1e293b',
+        borderWidth: 1,
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        padding: 12,
+        displayColors: true,
+        callbacks: {
+          label(context) {
+            const value = Number(context.parsed ?? context.raw ?? 0);
+            return `${context.label}: ${numberFormatter.format(value)}`;
+          }
+        }
+      }
+    }
+  };
 
   const pieCanvas = document.getElementById('grafico');
   if (pieCanvas && window.Chart && window.dashboardPieData) {
@@ -24,26 +84,24 @@
         labels: window.dashboardPieData.labels,
         datasets: [{
           data: window.dashboardPieData.values,
-          backgroundColor: ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#4F46E5', '#0EA5E9'],
-          borderWidth: 0,
-          hoverOffset: 12,
+          backgroundColor: ['#2F6DB3', '#0F766E', '#D97706', '#B42318', '#475467', '#2563EB', '#6366F1', '#64748B'],
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 6,
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        ...chartBaseOptions,
         cutout: '62%',
-        animation: {
-          duration: 1200,
-          easing: 'easeOutQuart'
-        },
         plugins: {
+          ...chartBaseOptions.plugins,
           legend: {
+            ...chartBaseOptions.plugins.legend,
             position: 'bottom',
             labels: {
+              ...chartBaseOptions.plugins.legend.labels,
               boxWidth: 10,
-              usePointStyle: true,
-              padding: 16
+              padding: 14
             }
           }
         }
@@ -61,28 +119,41 @@
         datasets: [{
           label: 'Quantidade',
           data: window.dashboardBarData.values,
-          borderRadius: 10,
-          backgroundColor: '#2563EB'
+          borderRadius: 8,
+          borderSkipped: false,
+          backgroundColor: '#2F6DB3',
+          maxBarThickness: 44
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 1100,
-          easing: 'easeOutQuart'
+        ...chartBaseOptions,
+        plugins: {
+          ...chartBaseOptions.plugins,
+          legend: { display: false }
         },
         scales: {
           x: {
-            grid: { display: false }
+            grid: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 11, weight: '600' }
+            }
           },
           y: {
             beginAtZero: true,
-            grid: { color: '#e5e7eb' }
+            ticks: {
+              precision: 0,
+              color: '#64748b',
+              font: { size: 11 },
+              callback(value) {
+                return numberFormatter.format(Number(value));
+              }
+            },
+            grid: {
+              color: '#e2e8f0',
+              drawBorder: false
+            }
           }
-        },
-        plugins: {
-          legend: { display: false }
         }
       }
     });
