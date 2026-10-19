@@ -3,10 +3,29 @@
   const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   const loadingScreen = document.querySelector('[data-loading-screen]');
   const toastHost = document.querySelector('[data-toast-host]');
+  const notifyToggle = document.getElementById('notifyToggle');
+  const notifyWrapper = document.querySelector('.notify-wrapper');
 
   if (sidebarToggle && sidebar) {
     sidebarToggle.addEventListener('click', () => {
       sidebar.classList.toggle('open');
+    });
+  }
+
+  if (notifyToggle && notifyWrapper) {
+    notifyToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = notifyWrapper.classList.toggle('open');
+      notifyToggle.classList.toggle('active', isOpen);
+      notifyToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!notifyWrapper.contains(event.target)) {
+        notifyWrapper.classList.remove('open');
+        notifyToggle.classList.remove('active');
+        notifyToggle.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 

@@ -2,16 +2,7 @@
 session_start();
 require '../config/conexao.php';
 
-if (!isset($_SESSION['user'])) {
-    header('Location: ../auth/login.php');
-    exit;
-}
-
-if (($_SESSION['user']['perfil'] ?? '') !== 'admin') {
-    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Acesso restrito ao administrador.'];
-    header('Location: ../index.php');
-    exit;
-}
+require_admin('../index.php');
 
 $stmt = $pdo->query('SELECT id, nome, email, perfil FROM usuarios ORDER BY id DESC');
 $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);

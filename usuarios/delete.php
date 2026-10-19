@@ -2,16 +2,7 @@
 session_start();
 require '../config/conexao.php';
 
-if (!isset($_SESSION['user'])) {
-    header('Location: ../auth/login.php');
-    exit;
-}
-
-if (($_SESSION['user']['perfil'] ?? '') !== 'admin') {
-    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Acesso negado para exclusão de usuário.'];
-    header('Location: ../index.php');
-    exit;
-}
+require_admin('../index.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: read.php');

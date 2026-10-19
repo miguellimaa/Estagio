@@ -1,4 +1,10 @@
 <?php
+if (defined('IRTRADE_HELPERS_LOADED')) {
+    return;
+}
+
+define('IRTRADE_HELPERS_LOADED', true);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -36,15 +42,90 @@ function flash_message(): ?array
     return $flash;
 }
 
+function hash_password(string $password): string
+{
+    return password_hash($password, PASSWORD_DEFAULT);
+}
+
+function verify_password(string $password, string $storedHash): bool
+{
+    if ($storedHash === '') {
+        return false;
+    }
+
+    $passwordInfo = password_get_info($storedHash);
+    if (is_array($passwordInfo) && isset($passwordInfo['algo']) && $passwordInfo['algo'] !== null && $passwordInfo['algo'] !== 0) {
+        return password_verify($password, $storedHash);
+    }
+
+    return hash_equals((string) $storedHash, $password);
+}
+
 function escape($value)
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function save_user_avatar(array $file): ?string
+{
+    if (empty($file['name']) || !is_uploaded_file($file['tmp_name'] ?? '')) {
+        return null;
+    }
+
+    $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    $mimeType = strtolower((string) ($file['type'] ?? ''));
+    $extension = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($mimeType, $allowedMimeTypes, true) && !in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+        return null;
+    }
+
+    if (($file['size'] ?? 0) > 2 * 1024 * 1024) {
+        return null;
+    }
+
+    $uploadDir = __DIR__ . '/../uploads/usuarios';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        return null;
+    }
+
+    $safeExtension = $extension !== '' ? $extension : match ($mimeType) {
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+        default => 'jpg',
+    };
+
+    try {
+        $filename = 'user_' . bin2hex(random_bytes(8)) . '.' . $safeExtension;
+    } catch (Exception $e) {
+        $filename = 'user_' . bin2hex(openssl_random_pseudo_bytes(8)) . '.' . $safeExtension;
+    }
+
+    $targetPath = $uploadDir . '/' . $filename;
+    if (!move_uploaded_file((string) $file['tmp_name'], $targetPath)) {
+        return null;
+    }
+
+    return 'uploads/usuarios/' . $filename;
 }
 
 function require_login(): void
 {
     if (empty($_SESSION['user'])) {
         header('Location: /Estagio-main/auth/login.php');
+        exit;
+    }
+}
+
+function require_admin(string $redirectTo = '/Estagio-main/index.php'): void
+{
+    require_login();
+
+    if (!is_admin()) {
+        $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Acesso restrito ao administrador.'];
+        header('Location: ' . $redirectTo);
         exit;
     }
 }
@@ -75,6 +156,42 @@ function ensure_settings_table(PDO $pdo): void
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ');
+
+    $initialized = true;
+}
+
+function ensure_perifericos_value_column(PDO $pdo): void
+{
+    static $initialized = false;
+
+    if ($initialized) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+    $stmt->execute(['perifericos', 'valor']);
+
+    if ((int) $stmt->fetchColumn() === 0) {
+        $pdo->exec('ALTER TABLE perifericos ADD COLUMN valor DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER quantidade');
+    }
+
+    $initialized = true;
+}
+
+function ensure_usuarios_avatar_column(PDO $pdo): void
+{
+    static $initialized = false;
+
+    if ($initialized) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+    $stmt->execute(['usuarios', 'foto_perfil']);
+
+    if ((int) $stmt->fetchColumn() === 0) {
+        $pdo->exec('ALTER TABLE usuarios ADD COLUMN foto_perfil VARCHAR(255) NULL DEFAULT NULL AFTER perfil');
+    }
 
     $initialized = true;
 }
@@ -185,6 +302,39 @@ function log_trash_cleanup(
         $userId,
         $requestUri,
     ]);
+}
+
+function ensure_database_indexes(PDO $pdo): void
+{
+    $indexes = [
+        'perifericos' => [
+            ['deleted_at', 'deleted_at'],
+            ['deleted_at_quantidade', 'deleted_at', 'quantidade'],
+            ['deleted_at_tipo', 'deleted_at', 'tipo'],
+            ['deleted_at_nome_ativo', 'deleted_at', 'nome_ativo'],
+        ],
+        'usuarios' => [
+            ['email', 'email'],
+            ['perfil', 'perfil'],
+        ],
+    ];
+
+    foreach ($indexes as $table => $tableIndexes) {
+        foreach ($tableIndexes as $index) {
+            $indexName = $index[0];
+            $indexColumns = array_slice($index, 1);
+
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.statistics WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?');
+            $stmt->execute([$table, $indexName]);
+
+            if ((int) $stmt->fetchColumn() > 0) {
+                continue;
+            }
+
+            $columnList = implode(', ', $indexColumns);
+            $pdo->exec('CREATE INDEX ' . $indexName . ' ON ' . $table . ' (' . $columnList . ')');
+        }
+    }
 }
 
 function get_recent_trash_cleanup_logs(PDO $pdo, int $limit = 20, ?string $fromDateTime = null): array

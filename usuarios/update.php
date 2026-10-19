@@ -2,16 +2,7 @@
 session_start();
 require '../config/conexao.php';
 
-if (!isset($_SESSION['user'])) {
-    header('Location: ../auth/login.php');
-    exit;
-}
-
-if (($_SESSION['user']['perfil'] ?? '') !== 'admin') {
-    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Acesso restrito ao administrador.'];
-    header('Location: ../index.php');
-    exit;
-}
+require_admin('../index.php');
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id) {
@@ -81,15 +72,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    try {
-        if ($senha !== '') {
-            $stmt = $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, senha = ?, perfil = ? WHERE id = ?');
-            $stmt->execute([$nome, $email, $senha, $perfil, $id]);
-        } else {
-            $stmt = $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, perfil = ? WHERE id = ?');
-            $stmt->execute([$nome, $email, $perfil, $id]);
+    $fotoPerfil = $dado['foto_perfil'] ?? null;
+    if (!empty($_POST['remover_foto_perfil'])) {
+        $fotoPerfil = null;
+    }
+
+    if (!empty($_FILES['foto_perfil']['name'])) {
+        $novaFoto = save_user_avatar($_FILES['foto_perfil']);
+        if ($novaFoto === null) {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'A imagem de perfil deve ser uma PNG, JPG, WEBP ou GIF de até 2 MB.'];
+            $_SESSION['form_old_users_update'] = [
+                'nome' => $nome,
+                'email' => $email,
+                'perfil' => $perfil,
+            ];
+            header("Location: update.php?id={$id}");
+            exit;
         }
 
+        $fotoPerfil = $novaFoto;
+    }
+
+    try {
+        if ($senha !== '') {
+            $senhaHash = hash_password($senha);
+            $stmt = $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, senha = ?, perfil = ?, foto_perfil = ? WHERE id = ?');
+            $stmt->execute([$nome, $email, $senhaHash, $perfil, $fotoPerfil, $id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, perfil = ?, foto_perfil = ? WHERE id = ?');
+            $stmt->execute([$nome, $email, $perfil, $fotoPerfil, $id]);
+        }
+
+        $_SESSION['user']['foto_perfil'] = $fotoPerfil;
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Usuário atualizado com sucesso.'];
         header('Location: read.php');
         exit;
@@ -116,7 +130,7 @@ ob_start();
         <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-arrow-left me-2"></i>Voltar</a>
     </div>
 
-    <form method="POST" novalidate class="row g-3">
+    <form method="POST" enctype="multipart/form-data" novalidate class="row g-3">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
         <div class="col-12 col-md-6">
@@ -157,12 +171,81 @@ ob_start();
             <?php if (!empty($errors['perfil'])): ?><div class="invalid-feedback d-block">Selecione um perfil válido.</div><?php endif; ?>
         </div>
 
+        <div class="col-12 col-md-6">
+            <label for="foto_perfil" class="form-label fw-semibold">Nova foto de perfil</label>
+            <div class="d-flex flex-column gap-2">
+                <button type="button" id="triggerFotoPerfil" class="btn btn-primary btn-ripple" style="max-width: 220px;">
+                    <i class="fa-solid fa-camera me-2"></i>Escolher nova foto
+                </button>
+                <input id="foto_perfil" name="foto_perfil" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="d-none">
+                <?php if (!empty($dado['foto_perfil'])): ?>
+                    <button type="button" id="removerFotoPerfil" class="btn btn-outline-danger btn-ripple" style="max-width: 220px;">
+                        <i class="fa-solid fa-trash me-2"></i>Remover foto
+                    </button>
+                <?php endif; ?>
+                <div class="form-text">Opcional. Substitui a imagem atual. Aceita PNG, JPG, WEBP e GIF até 2 MB.</div>
+            </div>
+            <div id="fotoPreview" class="mt-3 border rounded p-2 bg-light" style="min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <?php if (!empty($dado['foto_perfil'])): ?>
+                    <img src="<?= htmlspecialchars('../' . ltrim((string) $dado['foto_perfil'], '/')) ?>" alt="Foto atual" style="width: 160px; height: 160px; object-fit: cover; border-radius: 50%; border: 2px solid #dfe3e8;">
+                <?php else: ?>
+                    <span class="text-muted small">Pré-visualização da imagem</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="col-12 d-flex justify-content-between gap-2 mt-2">
             <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-xmark me-2"></i>Cancelar</a>
             <button type="submit" class="btn btn-warning btn-ripple"><i class="fa-solid fa-floppy-disk me-2"></i>Atualizar</button>
         </div>
     </form>
 </section>
+
+<script>
+    const fotoInputUpdate = document.getElementById('foto_perfil');
+    const fotoPreviewUpdate = document.getElementById('fotoPreview');
+    const triggerFotoPerfilUpdate = document.getElementById('triggerFotoPerfil');
+    const removerFotoBtn = document.getElementById('removerFotoPerfil');
+
+    if (triggerFotoPerfilUpdate && fotoInputUpdate) {
+        triggerFotoPerfilUpdate.addEventListener('click', function () {
+            fotoInputUpdate.click();
+        });
+    }
+
+    if (fotoInputUpdate && fotoPreviewUpdate) {
+        fotoInputUpdate.addEventListener('change', function () {
+            const file = this.files && this.files[0];
+            if (!file || !file.type.startsWith('image/')) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                fotoPreviewUpdate.innerHTML = '<img src="' + event.target.result + '" alt="Pré-visualização da foto" style="width: 160px; height: 160px; object-fit: cover; border-radius: 50%; border: 2px solid #dfe3e8;">';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (removerFotoBtn) {
+        removerFotoBtn.addEventListener('click', function () {
+            const input = document.getElementById('foto_perfil');
+            if (input) {
+                input.value = '';
+            }
+
+            fotoPreviewUpdate.innerHTML = '<span class="text-muted small">Pré-visualização da imagem</span>';
+            this.remove();
+
+            const removerFlag = document.createElement('input');
+            removerFlag.type = 'hidden';
+            removerFlag.name = 'remover_foto_perfil';
+            removerFlag.value = '1';
+            document.querySelector('form').appendChild(removerFlag);
+        });
+    }
+</script>
 
 <?php
 $conteudo = ob_get_clean();

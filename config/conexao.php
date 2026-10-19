@@ -1,10 +1,45 @@
 <?php
 
-// Configuracao padrao para ambiente XAMPP local.
-$dbHost = 'localhost';
-$dbName = 'irtrade_estoque';
-$dbUser = 'root';
-$dbPass = '';
+function load_env_file(string $path): array
+{
+    $values = [];
+
+    if (!is_file($path)) {
+        return $values;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) {
+        return $values;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+
+        $parts = explode('=', $line, 2);
+        if (count($parts) !== 2) {
+            continue;
+        }
+
+        $key = trim($parts[0]);
+        $value = trim($parts[1]);
+        $values[$key] = trim($value, " \t\n\r\0\x0B\"'");
+    }
+
+    return $values;
+}
+
+$env = load_env_file(__DIR__ . '/../.env');
+$env = array_merge($_ENV, $_SERVER, $env);
+
+$dbHost = getenv('DB_HOST') ?: ($env['DB_HOST'] ?? 'localhost');
+$dbName = getenv('DB_NAME') ?: ($env['DB_NAME'] ?? 'irtrade_estoque');
+$dbUser = getenv('DB_USER') ?: ($env['DB_USER'] ?? 'root');
+$dbPass = getenv('DB_PASS') ?: ($env['DB_PASS'] ?? '');
 
 $dsn = "mysql:host={$dbHost};dbname={$dbName};charset=utf8";
 
@@ -15,18 +50,32 @@ try {
 	]);
 } catch (PDOException $e) {
 	http_response_code(500);
-	echo '<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Erro de conexão</title><style>body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f8fafc;color:#111827;display:grid;place-items:center;min-height:100vh}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;max-width:560px;box-shadow:0 8px 30px rgba(0,0,0,.06)}h1{margin:0 0 8px;font-size:1.2rem}p{margin:0;color:#6b7280}</style></head><body><div class="card"><h1>Não foi possível conectar ao banco de dados</h1><p>Verifique se o MySQL do XAMPP está iniciado e se as credenciais em config/conexao.php estão corretas.</p></div></body></html>';
+	echo '<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Erro de conexão</title><style>body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f8fafc;color:#111827;display:grid;place-items:center;min-height:100vh}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;max-width:560px;box-shadow:0 8px 30px rgba(0,0,0,.06)}h1{margin:0 0 8px;font-size:1.2rem}p{margin:0;color:#6b7280}</style></head><body><div class="card"><h1>Não foi possível conectar ao banco de dados</h1><p>Verifique se o MySQL do XAMPP está iniciado e se as variáveis de ambiente/configuração estão corretas.</p></div></body></html>';
 	exit;
 }
 
 if (session_status() === PHP_SESSION_NONE) {
+	$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && (string) $_SERVER['SERVER_PORT'] === '443');
+
+	session_set_cookie_params([
+		'lifetime' => 0,
+		'path' => '/',
+		'domain' => '',
+		'secure' => $secure,
+		'httponly' => true,
+		'samesite' => 'Lax',
+	]);
+
 	session_start();
 }
 
 require_once __DIR__ . '/helpers.php';
 
+ensure_perifericos_value_column($pdo);
+ensure_usuarios_avatar_column($pdo);
 ensure_settings_table($pdo);
 ensure_trash_cleanup_logs_table($pdo);
+ensure_database_indexes($pdo);
 
 $trashAutoDeleteDays = setting_get_int($pdo, 'trash_auto_delete_days', 90);
 

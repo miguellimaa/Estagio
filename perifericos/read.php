@@ -2,10 +2,7 @@
 session_start();
 require '../config/conexao.php';
 
-if (!isset($_SESSION['user'])) {
-    header("Location: ../auth/login.php");
-    exit;
-}
+require_login();
 
 $lowStockThreshold = setting_get_int($pdo, 'low_stock_threshold', 5);
 $tablePerPage = setting_get_int($pdo, 'table_per_page', 8);
@@ -13,14 +10,18 @@ $tablePerPage = max(5, min(100, $tablePerPage));
 $exportRole = setting_get($pdo, 'export_role', 'admin') ?? 'admin';
 $canExport = $exportRole === 'usuario' || is_admin();
 
-// BUSCA SOMENTE OS ITENS ATIVOS
-$stmt = $pdo->query("
-    SELECT *
-    FROM perifericos
-    WHERE deleted_at IS NULL
-    ORDER BY id DESC
-");
+$currentPage = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+$currentPage = max(1, $currentPage);
 
+$totalRegistros = (int) $pdo->query('SELECT COUNT(*) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
+$totalPaginas = $totalRegistros > 0 ? (int) ceil($totalRegistros / $tablePerPage) : 1;
+$currentPage = min($currentPage, $totalPaginas);
+$offset = ($currentPage - 1) * $tablePerPage;
+
+$stmt = $pdo->prepare('SELECT id, nome_ativo, tipo, quantidade, valor FROM perifericos WHERE deleted_at IS NULL ORDER BY id DESC LIMIT :limit OFFSET :offset');
+$stmt->bindValue(':limit', $tablePerPage, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ob_start();
@@ -67,7 +68,7 @@ ob_start();
         <div>
             <h2 class="table-title h5 fw-bold mb-0">Tabela de Periféricos</h2>
             <p class="table-subtitle text-secondary small mb-0 mt-1">
-                Total de registros: <?= count($dados) ?>
+                Exibindo <?= count($dados) ?> de <?= $totalRegistros ?> registro(s)
             </p>
         </div>
 
@@ -220,19 +221,19 @@ ob_start();
 
 
     <div class="table-pagination d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span data-page-info>Total de <?= count($dados) ?> registro(s)</span>
+        <span data-page-info>Página <?= $currentPage ?> de <?= $totalPaginas ?> • <?= $totalRegistros ?> itens</span>
 
         <nav aria-label="Paginação da tabela de periféricos">
             <ul class="pagination pagination-sm mb-0">
-                <li class="page-item">
-                    <button type="button" class="page-link" data-page-prev aria-label="Anterior">
+                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= max(1, $currentPage - 1) ?>" aria-label="Anterior">
                         <i class="fa-solid fa-chevron-left"></i>
-                    </button>
+                    </a>
                 </li>
-                <li class="page-item">
-                    <button type="button" class="page-link" data-page-next aria-label="Próxima">
+                <li class="page-item <?= $currentPage >= $totalPaginas ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= min($totalPaginas, $currentPage + 1) ?>" aria-label="Próxima">
                         <i class="fa-solid fa-chevron-right"></i>
-                    </button>
+                    </a>
                 </li>
             </ul>
         </nav>

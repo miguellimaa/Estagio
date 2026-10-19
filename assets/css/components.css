@@ -40,26 +40,43 @@
   gap: 12px;
 }
 
+.notify-wrapper {
+  position: relative;
+}
+
 .notify-btn {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--border);
   border-radius: 12px;
   display: grid;
   place-items: center;
-  color: #374151;
+  color: #4b5563;
   background: #fff;
   position: relative;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.notify-btn:hover {
+  border-color: rgba(15, 23, 42, 0.15);
+}
+
+.notify-btn.active {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.2);
+  color: #0f172a;
 }
 
 .notify-btn span {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--danger);
+  background: #ef4444;
+  box-shadow: 0 0 0 2px #fff;
 }
 
 .profile-pill {

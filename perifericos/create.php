@@ -2,10 +2,8 @@
 session_start();
 require '../config/conexao.php';
 
-if(!isset($_SESSION['user'])){
-    header("Location: ../auth/login.php");
-    exit;
-}
+
+require_login();
 
 $nome = '';
 $tipo = '';

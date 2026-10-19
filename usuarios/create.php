@@ -2,16 +2,7 @@
 session_start();
 require '../config/conexao.php';
 
-if (!isset($_SESSION['user'])) {
-    header('Location: ../auth/login.php');
-    exit;
-}
-
-if (($_SESSION['user']['perfil'] ?? '') !== 'admin') {
-    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Acesso restrito ao administrador.'];
-    header('Location: ../index.php');
-    exit;
-}
+require_admin('../index.php');
 
 $nome = '';
 $email = '';
@@ -58,9 +49,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $fotoPerfil = null;
+    if (!empty($_FILES['foto_perfil']['name'])) {
+        $fotoPerfil = save_user_avatar($_FILES['foto_perfil']);
+        if ($fotoPerfil === null) {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'A imagem de perfil deve ser uma PNG, JPG, WEBP ou GIF de até 2 MB.'];
+            $_SESSION['form_old_users_create'] = [
+                'nome' => $nome,
+                'email' => $email,
+                'perfil' => $perfil,
+            ];
+            header('Location: create.php');
+            exit;
+        }
+    }
+
     try {
-        $stmt = $pdo->prepare('INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)');
-        $stmt->execute([$nome, $email, $senha, $perfil]);
+        $senhaHash = hash_password($senha);
+        $stmt = $pdo->prepare('INSERT INTO usuarios (nome, email, senha, perfil, foto_perfil) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([$nome, $email, $senhaHash, $perfil, $fotoPerfil]);
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Usuário criado com sucesso.'];
         header('Location: read.php');
         exit;
@@ -100,7 +107,7 @@ ob_start();
         <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-arrow-left me-2"></i>Voltar</a>
     </div>
 
-    <form method="POST" novalidate class="row g-3">
+    <form method="POST" enctype="multipart/form-data" novalidate class="row g-3">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
         <div class="col-12 col-md-6">
@@ -142,12 +149,54 @@ ob_start();
             <?php if (!empty($errors['perfil'])): ?><div class="invalid-feedback d-block">Selecione um perfil válido.</div><?php endif; ?>
         </div>
 
+        <div class="col-12 col-md-6">
+            <label for="foto_perfil" class="form-label fw-semibold">Foto de perfil</label>
+            <div class="d-flex flex-column gap-2">
+                <button type="button" id="triggerFotoPerfil" class="btn btn-primary btn-ripple" style="max-width: 220px;">
+                    <i class="fa-solid fa-image me-2"></i>Escolher foto
+                </button>
+                <input id="foto_perfil" name="foto_perfil" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="d-none">
+                <div class="form-text">Opcional. Aceita PNG, JPG, WEBP e GIF até 2 MB.</div>
+            </div>
+            <div id="fotoPreview" class="mt-3 border rounded p-2 bg-light" style="min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <span class="text-muted small">Pré-visualização da imagem</span>
+            </div>
+        </div>
+
         <div class="col-12 d-flex justify-content-between gap-2 mt-2">
             <a href="read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-xmark me-2"></i>Cancelar</a>
             <button type="submit" class="btn btn-success btn-ripple"><i class="fa-solid fa-floppy-disk me-2"></i>Salvar</button>
         </div>
     </form>
 </section>
+
+<script>
+    const fotoInputCreate = document.getElementById('foto_perfil');
+    const fotoPreviewCreate = document.getElementById('fotoPreview');
+    const triggerFotoPerfilCreate = document.getElementById('triggerFotoPerfil');
+
+    if (triggerFotoPerfilCreate && fotoInputCreate) {
+        triggerFotoPerfilCreate.addEventListener('click', function () {
+            fotoInputCreate.click();
+        });
+    }
+
+    if (fotoInputCreate && fotoPreviewCreate) {
+        fotoInputCreate.addEventListener('change', function () {
+            const file = this.files && this.files[0];
+            if (!file || !file.type.startsWith('image/')) {
+                fotoPreviewCreate.innerHTML = '<span class="text-muted small">Pré-visualização da imagem</span>';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                fotoPreviewCreate.innerHTML = '<img src="' + event.target.result + '" alt="Pré-visualização da foto" style="width: 160px; height: 160px; object-fit: cover; border-radius: 50%; border: 2px solid #dfe3e8;">';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+</script>
 
 <?php
 $conteudo = ob_get_clean();

@@ -8,7 +8,7 @@ $menu = [
     ['label' => 'Periféricos', 'icon' => 'fa-keyboard', 'href' => $baseUrl . '/perifericos/read.php', 'match' => '/perifericos/'],
     ['label' => 'Lixeira', 'icon' => 'fa-trash-can', 'href' => $baseUrl . '/perifericos/lixeira.php', 'match' => '/perifericos/lixeira.php'],
     ['label' => 'Usuários', 'icon' => 'fa-users', 'href' => $baseUrl . '/usuarios/read.php', 'match' => '/usuarios/'],
-    ['label' => 'Relatórios', 'icon' => 'fa-chart-pie', 'href' => '#', 'match' => '/relatorios/'],
+    ['label' => 'Relatórios', 'icon' => 'fa-chart-pie', 'href' => $baseUrl . '/relatorios/read.php', 'match' => '/relatorios/'],
     ['label' => 'Configurações', 'icon' => 'fa-gear', 'href' => $baseUrl . '/configuracoes/read.php', 'match' => '/configuracoes/'],
 ];
 
@@ -20,6 +20,23 @@ if (!empty($_SESSION['flash'])) {
     $flash = $_SESSION['flash'];
     unset($_SESSION['flash']);
 }
+
+$loggedUser = $_SESSION['user'] ?? [];
+$avatarSrc = $baseUrl . '/assets/img/avatar.png';
+if (!empty($loggedUser['foto_perfil'])) {
+    $foto = (string) $loggedUser['foto_perfil'];
+    if (str_starts_with($foto, 'http')) {
+        $avatarSrc = $foto;
+    } else {
+        $avatarSrc = $baseUrl . '/' . ltrim($foto, '/');
+    }
+}
+
+$notifications = $_SESSION['notifications'] ?? [
+    ['title' => 'Sistema atualizado', 'message' => 'Dashboard e inventário prontos para uso.', 'time' => 'agora'],
+    ['title' => 'Estoque em alerta', 'message' => '2 itens estão próximos do limite mínimo.', 'time' => '2h atrás'],
+    ['title' => 'Usuário ativo', 'message' => 'Sua sessão foi renovada com sucesso.', 'time' => 'hoje'],
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -99,13 +116,15 @@ if (!empty($_SESSION['flash'])) {
                     <input type="text" class="form-control" placeholder="Pesquisar periférico..." data-global-search autocomplete="off">
                 </div>
 
-                <button class="notify-btn" type="button" aria-label="Notificações">
-                    <i class="fa-regular fa-bell"></i>
-                    <span></span>
-                </button>
+                <div class="notify-wrapper">
+                    <button class="notify-btn" type="button" id="notifyToggle" aria-label="Notificações" aria-expanded="false">
+                        <i class="fa-regular fa-bell"></i>
+                        <span></span>
+                    </button>
+                </div>
 
                 <div class="profile-pill">
-                    <img src="<?= $baseUrl ?>/assets/img/avatar.png" alt="Avatar">
+                    <img src="<?= htmlspecialchars($avatarSrc) ?>" alt="Avatar" style="object-fit: cover;">
                     <div>
                         <small>Conta ativa</small>
                         <strong><?= htmlspecialchars($_SESSION['user']['nome'] ?? 'Usuário') ?></strong>

@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'app_name' => 'IRTRADE Asset Manager',
-    'base_url' => '/Estagio-main',
+    'app_name' => getenv('APP_NAME') ?: 'IRTRADE Asset Manager',
+    'base_url' => getenv('BASE_URL') ?: '/Estagio-main',
 ];

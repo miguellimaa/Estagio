@@ -18,7 +18,16 @@ if($_POST){
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
-    if($user && $_POST['senha'] == $user['senha']){
+    if ($user && verify_password((string)($_POST['senha'] ?? ''), (string)($user['senha'] ?? ''))) {
+        $storedInfo = password_get_info((string) $user['senha']);
+        if (!is_array($storedInfo) || !isset($storedInfo['algo']) || $storedInfo['algo'] === null || $storedInfo['algo'] === 0) {
+            $newHash = hash_password((string)($_POST['senha'] ?? ''));
+            $updateStmt = $pdo->prepare('UPDATE usuarios SET senha = ? WHERE id = ?');
+            $updateStmt->execute([$newHash, (int) $user['id']]);
+            $user['senha'] = $newHash;
+        }
+
+        session_regenerate_id(true);
         $_SESSION['user'] = $user;
         header("Location: ../index.php");
         exit;

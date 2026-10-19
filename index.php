@@ -11,27 +11,27 @@ $lowStockThreshold = setting_get_int($pdo, 'low_stock_threshold', 5);
 $exportRole = setting_get($pdo, 'export_role', 'admin') ?? 'admin';
 $canExport = $exportRole === 'usuario' || is_admin();
 
-$total = $pdo->query('SELECT COUNT(*) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
-$quantidade = $pdo->query('SELECT SUM(quantidade) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
-$tipos = $pdo->query('SELECT COUNT(DISTINCT tipo) FROM perifericos WHERE deleted_at IS NULL')->fetchColumn();
+$summary = $pdo->query('SELECT COUNT(*) total, COALESCE(SUM(quantidade), 0) quantidade, COUNT(DISTINCT tipo) tipos FROM perifericos WHERE deleted_at IS NULL')->fetch(PDO::FETCH_ASSOC);
+$total = (int) ($summary['total'] ?? 0);
+$quantidade = (int) ($summary['quantidade'] ?? 0);
+$tipos = (int) ($summary['tipos'] ?? 0);
 
-$grafico = $pdo->query('SELECT tipo, SUM(quantidade) total FROM perifericos WHERE deleted_at IS NULL GROUP BY tipo');
+$grafico = $pdo->query('SELECT tipo, SUM(quantidade) total FROM perifericos WHERE deleted_at IS NULL GROUP BY tipo ORDER BY total DESC')->fetchAll(PDO::FETCH_ASSOC);
 
 $labels = [];
 $dados = [];
 
 foreach ($grafico as $g) {
     $labels[] = $g['tipo'];
-    $dados[] = $g['total'];
+    $dados[] = (int) $g['total'];
 }
 
-$stmtBaixo = $pdo->prepare('SELECT * FROM perifericos WHERE deleted_at IS NULL AND quantidade <= ?');
-$stmtBaixo->execute([$lowStockThreshold]);
-$baixo = $stmtBaixo;
-$baixoItens = $baixo->fetchAll(PDO::FETCH_ASSOC);
+$baixoItens = $pdo->prepare('SELECT id, nome_ativo, tipo, quantidade FROM perifericos WHERE deleted_at IS NULL AND quantidade <= :threshold ORDER BY quantidade ASC, id DESC LIMIT 10');
+$baixoItens->execute([':threshold' => $lowStockThreshold]);
+$baixoItens = $baixoItens->fetchAll(PDO::FETCH_ASSOC);
 
-$ultimos = $pdo->query('SELECT * FROM perifericos WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
-$perifericosBusca = $pdo->query('SELECT id, nome_ativo, tipo, numero_serie, chave_licenca, quantidade FROM perifericos WHERE deleted_at IS NULL ORDER BY nome_ativo ASC')->fetchAll(PDO::FETCH_ASSOC);
+$ultimos = $pdo->query('SELECT id, nome_ativo, tipo, quantidade FROM perifericos WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
+$perifericosBusca = $pdo->query('SELECT id, nome_ativo, tipo, numero_serie, chave_licenca, quantidade FROM perifericos WHERE deleted_at IS NULL ORDER BY nome_ativo ASC LIMIT 1000')->fetchAll(PDO::FETCH_ASSOC);
 
 $labelsJson = json_encode($labels, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 $dadosJson = json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -63,6 +63,7 @@ ob_start();
             <div class="quick-actions">
                 <a href="perifericos/create.php" class="btn btn-primary btn-ripple"><i class="fa-solid fa-plus me-2"></i>Novo</a>
                 <a href="perifericos/read.php" class="btn btn-outline-secondary btn-ripple"><i class="fa-solid fa-table-list me-2"></i>Listar</a>
+                <a href="relatorios/read.php" class="btn btn-outline-primary btn-ripple"><i class="fa-solid fa-chart-pie me-2"></i>Relatórios</a>
                 <a href="perifericos/lixeira.php" class="btn btn-warning btn-ripple"><i class="fa-solid fa-trash-can-arrow-up me-2"></i>Lixeira</a>
                 <?php if ($canExport): ?>
                     <a href="perifericos/export.php" class="btn btn-success btn-ripple"><i class="fa-solid fa-file-export me-2"></i>Exportar CSV</a>
